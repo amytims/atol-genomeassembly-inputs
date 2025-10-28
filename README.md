@@ -1,1 +1,1 @@
-# atol-genomeassembly-config
+# atol-genomeassembly-inputs
