@@ -4,8 +4,8 @@ process CREATE_CONFIG_FILE {
 
     input:
     tuple val(busco_lineage), val(Genus_species)
-    path filtered_pacbio
-    path hic
+    path pacbio_reads
+    path hic_reads
     
     output:
     path "config_file.yaml"
@@ -15,12 +15,12 @@ echo "dataset:" >> config_file.yaml
 echo "  id: ${params.sample_id}"  >> config_file.yaml
 echo "  pacbio:" >> config_file.yaml
 echo "    reads:" >> config_file.yaml
-echo "        - reads: ${params.outdir}/reads/hifi/${filtered_pacbio}" >> config_file.yaml
+echo "        - reads: ${params.outdir}/reads/hifi/${pacbio_reads}" >> config_file.yaml
 echo "  HiC:" >> config_file.yaml
 echo "    reads:" >> config_file.yaml
 if [ "${hic}" != "${projectDir}/assets/dummy_hic" ]
 then
-echo "        - reads: ${params.outdir}/reads/hic/${hic}" >> config_file.yaml
+echo "        - reads: ${params.outdir}/reads/hic/${hic_reads}" >> config_file.yaml
 fi
 echo "hic_motif: GATC,GANTC,CTNAG,TTAA" >> config_file.yaml
 echo "hic_aligner: bwamem2" >> config_file.yaml
