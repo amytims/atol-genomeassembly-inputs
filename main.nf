@@ -47,13 +47,30 @@ params.each { entry ->
 
 include { CONCAT_PACBIO_READS } from './modules/concat_pacbio_reads.nf'
 include { CONCAT_HIC_READS } from './modules/concat_hic_reads.nf'
-
 include { CREATE_CONFIG_FILE } from './modules/create_config_file.nf'
 
 workflow {
 
     // getting input files
+    pacbio_reads_ch = Channel.fromPath("${params.pacbio_reads}/*.{fastq.gz,bam}")
+    //pacbio_reads_ch.view()    
 
-    pacbio_reads_ch = Channel.fromPath(params.pacbio_reads)
-    pacbio_reads_ch.view()
+    // check to make sure they aren't of mixed file type
+    pacbio_reads_ch
+        .collect()
+        .subscribe { files ->
+
+        // files is now a List<Path>
+        def all_bam  = files.every { it.name.endsWith('.bam') }
+        def all_fastq = files.every { it.name.endsWith('.fastq.gz') }
+
+        if ( !all_fastq && !all_bam ) { error (
+            """
+            ERROR: both .bam and .fastq.gz inputs detected for pacbio data. Ensure
+            input files are a consistent type.
+            """.stripIndent()
+        )}
+    }
+
+    CONCAT_PACBIO_READS(pacbio_reads_ch.collect())
 }
