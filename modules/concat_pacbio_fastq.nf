@@ -1,5 +1,5 @@
 process CONCAT_PACBIO_FASTQ {
-    publishDir "${params.outdir}/processed_reads/hifi", mode: 'copy'
+    publishDir "${params.outdir}/reads/hifi", mode: 'copy'
 
     input:
     path files

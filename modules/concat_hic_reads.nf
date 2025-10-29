@@ -1,5 +1,5 @@
 process CONCAT_HIC_READS {
-    publishDir "${params.outdir}/processed_reads/hic", mode: 'copy'
+    publishDir "${params.outdir}/reads/hic", mode: 'copy'
 
     input:
         path "*"
