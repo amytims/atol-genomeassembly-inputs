@@ -5,7 +5,7 @@ process CONCAT_PACBIO_BAM {
     path files
 
     output:
-    path "ccs_reads.fasta.gz", emit: filtered_pacbio
+    path "${params.sample_id}_ccs_reads.fasta.gz", emit: processed_pacbio
 
     script:
     """
