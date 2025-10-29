@@ -9,7 +9,7 @@ process CONCAT_PACBIO_FASTQ {
 
     script:
     """
-    zcat $files | seqkit fq2fa -j ${task.cpus} -o ccs_reads.fasta.gz
+    zcat $files | seqkit fq2fa -j ${task.cpus} -o "${params.sample_id}_ccs_reads.fasta.gz"
     """
 
 }

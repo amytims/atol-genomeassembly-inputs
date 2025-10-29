@@ -32,6 +32,7 @@ allowed_params = [
     "outdir",
     "pacbio_reads",
     "hic_reads",
+    "sample_id",
 
     // Pawsey options
     "max_cpus",
@@ -43,6 +44,10 @@ params.each { entry ->
         println("The parameter <${entry.key}> is not known");
         exit 0;
     }
+}
+
+if ( !sample_id ) {
+    throw new IllegalArgumentException("no --sample_id specified")
 }
 
 include { CONCAT_PACBIO_FASTQ } from './modules/concat_pacbio_fastq.nf'
@@ -74,19 +79,28 @@ println "✅ Detected file type: ${unique_exts[0]}"
 
 
 // see whether hi-c reads exist
-def hic_reads = file(params.pacbio_reads)
-def input_hic = hic_reads.listFiles().findAll
+def hic_reads = file(params.hic_reads)
+
+def input_hic = (hic_reads.exists() && hic_reads.isDirectory()) ?
+                 hic_reads.listFiles()?.findAll { it.isFile() } :
+                 []
 
 if (!input_hic) {
-    log.warn("No hi-c input files found. Are you running an assembly without them?")
+    log.warn "hic reads directory does not exist or is empty - are you running an assembly without scaffolding?"
+} else {
+    log.info "✅ Found ${input_hic.size()} hic files in '${hic_reads}'"
 }
 
+
 workflow {
-    pacbio_reads_ch = Channel.fromPath("${params.pacbio_reads}/*.{fastq.gz,bam}")
+
+    def hic_reads_ch = input_hic ? Channel.fromPath(input_hic) : Channel.empty()
+
+    pacbio_reads_ch = Channel.fromPath(input_pacbio)
 
     if (unique_exts[0] == 'bam') {
 
-        CONCAT_PACBIO_READS(pacbio_reads_ch.collect())
+        CONCAT_PACBIO_BAM(pacbio_reads_ch.collect())
 
     } else if (unique_exts[0] == 'fastq.gz') {
 
