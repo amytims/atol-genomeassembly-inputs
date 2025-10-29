@@ -46,7 +46,7 @@ params.each { entry ->
     }
 }
 
-if ( !sample_id ) {
+if ( !params.sample_id ) {
     throw new IllegalArgumentException("no --sample_id specified")
 }
 
@@ -98,18 +98,24 @@ workflow {
 
     pacbio_reads_ch = Channel.fromPath(input_pacbio)
 
+    concat_pacbio_reads_ch = pacbio_reads_ch.collect()
+
     if (unique_exts[0] == 'bam') {
 
-        CONCAT_PACBIO_BAM(pacbio_reads_ch.collect())
+        CONCAT_PACBIO_BAM(concat_pacbio_reads_ch)
 
     } else if (unique_exts[0] == 'fastq.gz') {
 
-        CONCAT_PACBIO_FASTQ(pacbio_reads_ch.collect())
+        CONCAT_PACBIO_FASTQ(concat_pacbio_reads_ch)
 
     } else {
 
         error("unrecognised file type: ${unique_exts[0]}. How did you even get here?")
 
     }
+
+    concat_hic_reads_ch = hic_reads_ch.collect()
+
+    CONCAT_HIC_READS(concat_hic_reads_ch)    
 
 }
