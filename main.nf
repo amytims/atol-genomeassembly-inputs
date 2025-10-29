@@ -34,6 +34,12 @@ allowed_params = [
     "hic_reads",
     "sample_id",
 
+    "scientific_name",
+    "busco_lineage",
+    "busco_version",
+    "mito_min_length",
+    "mito_code",
+
     // Pawsey options
     "max_cpus",
     "max_memory"
@@ -94,28 +100,34 @@ if (!input_hic) {
 
 workflow {
 
-    def hic_reads_ch = input_hic ? Channel.fromPath(input_hic) : Channel.empty()
+    // input channels
+    hic_reads_ch = input_hic ? Channel.fromPath(input_hic) : Channel.empty()
 
     pacbio_reads_ch = Channel.fromPath(input_pacbio)
 
+
+    // process pacbio reads
     concat_pacbio_reads_ch = pacbio_reads_ch.collect()
 
     if (unique_exts[0] == 'bam') {
-
         CONCAT_PACBIO_BAM(concat_pacbio_reads_ch)
-
+        pacbio_config_ch = CONCAT_PACBIO_BAM.out.processed_pacbio
     } else if (unique_exts[0] == 'fastq.gz') {
-
         CONCAT_PACBIO_FASTQ(concat_pacbio_reads_ch)
-
+        pacbio_config_ch = CONCAT_PACBIO_FASTQ.out.processed_pacbio
     } else {
-
         error("unrecognised file type: ${unique_exts[0]}. How did you even get here?")
-
     }
 
+
+    //process any hic reads
     concat_hic_reads_ch = hic_reads_ch.collect()
 
     CONCAT_HIC_READS(concat_hic_reads_ch)    
 
+    hic_config_ch = CONCAT_HIC_READS.out.cram ? CONCAT_HIC_READS.out.cram : Channel.empty()
+
+    // create config file
+
+    CREATE_CONFIG_FILE(pacbio_config_ch, hic_config_ch)
 }
