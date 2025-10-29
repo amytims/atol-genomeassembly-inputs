@@ -4,7 +4,7 @@ process CREATE_CONFIG_FILE {
 
     input:
     path pacbio_reads
-    path hic_reads.optional()
+    path hic_reads
     
     output:
     path "config_file.yaml"
@@ -17,7 +17,7 @@ echo "    reads:" >> config_file.yaml
 echo "        - reads: ${params.outdir}/reads/hifi/${pacbio_reads}" >> config_file.yaml
 echo "  HiC:" >> config_file.yaml
 echo "    reads:" >> config_file.yaml
-if [ -f "${hic_reads}" ]
+if [ "${hic_reads}" != "${projectDir}/assets/dummy_hic" ]
 then
 echo "        - reads: ${params.outdir}/reads/hic/${hic_reads}" >> config_file.yaml
 fi

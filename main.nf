@@ -125,7 +125,7 @@ workflow {
 
     CONCAT_HIC_READS(concat_hic_reads_ch)    
 
-    hic_config_ch = CONCAT_HIC_READS.out.cram ? CONCAT_HIC_READS.out.cram : Channel.empty()
+    hic_config_ch = CONCAT_HIC_READS.out.cram ? CONCAT_HIC_READS.out.cram : file("${projectDir}/assets/dummy_hic")
 
     // create config file
 
