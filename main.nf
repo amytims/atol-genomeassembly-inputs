@@ -39,6 +39,8 @@ allowed_params = [
     "busco_version",
     "mito_min_length",
     "mito_code",
+    "hic_motif",
+    "hic_aligner",
 
     // Pawsey options
     "max_cpus",
@@ -119,15 +121,16 @@ workflow {
         error("unrecognised file type: ${unique_exts[0]}. How did you even get here?")
     }
 
-
     //process any hic reads
-    concat_hic_reads_ch = hic_reads_ch.collect()
-
-    CONCAT_HIC_READS(concat_hic_reads_ch)    
-
-    hic_config_ch = CONCAT_HIC_READS.out.cram ? CONCAT_HIC_READS.out.cram : file("${projectDir}/assets/dummy_hic")
+    if (input_hic) {
+        concat_hic_reads_ch = hic_reads_ch.collect()
+        CONCAT_HIC_READS(concat_hic_reads_ch)    
+        hic_config_ch = CONCAT_HIC_READS.out.cram
+    } else {
+        hic_config_ch = file("${projectDir}/assets/dummy_hic")
+    }
 
     // create config file
-
     CREATE_CONFIG_FILE(pacbio_config_ch, hic_config_ch)
+    
 }
