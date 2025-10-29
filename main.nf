@@ -45,32 +45,57 @@ params.each { entry ->
     }
 }
 
-include { CONCAT_PACBIO_READS } from './modules/concat_pacbio_reads.nf'
+include { CONCAT_PACBIO_FASTQ } from './modules/concat_pacbio_fastq.nf'
+include { CONCAT_PACBIO_BAM } from './modules/concat_pacbio_bam.nf'
 include { CONCAT_HIC_READS } from './modules/concat_hic_reads.nf'
 include { CREATE_CONFIG_FILE } from './modules/create_config_file.nf'
 
+
+// check pacbio reads are all the same file type
+def pacbio_reads = file(params.pacbio_reads)
+def input_pacbio = pacbio_reads.listFiles().findAll { it.name.endsWith('.bam') || it.name.endsWith('.fastq.gz') }
+
+if (!input_pacbio) {
+    throw new IllegalArgumentException("❌ No pacbio input files found!")
+}
+
+// --- get extensions ---
+def unique_exts = input_pacbio.collect { f ->
+    f.name.endsWith('.fastq.gz') ? 'fastq.gz' :
+    f.name.endsWith('.bam')      ? 'bam' :
+    f.extension
+}.unique()
+
+if (unique_exts.size() > 1) {
+    throw new IllegalArgumentException("❌ Multiple file types detected in pacbio inputs: ${unique_exts.join(', ')}")
+}
+
+println "✅ Detected file type: ${unique_exts[0]}"
+
+
+// see whether hi-c reads exist
+def hic_reads = file(params.pacbio_reads)
+def input_hic = hic_reads.listFiles().findAll
+
+if (!input_hic) {
+    log.warn("No hi-c input files found. Are you running an assembly without them?")
+}
+
 workflow {
-
-    // getting input files
     pacbio_reads_ch = Channel.fromPath("${params.pacbio_reads}/*.{fastq.gz,bam}")
-    //pacbio_reads_ch.view()    
 
-    // check to make sure they aren't of mixed file type
-    pacbio_reads_ch
-        .collect()
-        .subscribe { files ->
+    if (unique_exts[0] == 'bam') {
 
-        // files is now a List<Path>
-        def all_bam  = files.every { it.name.endsWith('.bam') }
-        def all_fastq = files.every { it.name.endsWith('.fastq.gz') }
+        CONCAT_PACBIO_READS(pacbio_reads_ch.collect())
 
-        if ( !all_fastq && !all_bam ) { error (
-            """
-            ERROR: both .bam and .fastq.gz inputs detected for pacbio data. Ensure
-            input files are a consistent type.
-            """.stripIndent()
-        )}
+    } else if (unique_exts[0] == 'fastq.gz') {
+
+        CONCAT_PACBIO_FASTQ(pacbio_reads_ch.collect())
+
+    } else {
+
+        error("unrecognised file type: ${unique_exts[0]}. How did you even get here?")
+
     }
 
-    CONCAT_PACBIO_READS(pacbio_reads_ch.collect())
 }
