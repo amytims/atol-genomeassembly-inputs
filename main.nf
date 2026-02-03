@@ -4,6 +4,8 @@ def help_file() {
     ########### MERGE AND REFORMAT INPUT FILES; CREATE CONFIG FOR DToL PIPELINE ###########
     #######################################################################################
 
+        --yaml
+        
         --outdir <PATH/TO/OUTPUT/DIRECTORY>
                 File path to where reads and config file should be stored
 
@@ -29,6 +31,7 @@ if (params.remove('help')) {
 // check no unexpected parameters were specified
 allowed_params = [
     // pipeline inputs
+    "yaml",
     "outdir",
     "pacbio_reads",
     "hic_reads",
@@ -64,73 +67,73 @@ include { CONCAT_HIC_READS } from './modules/concat_hic_reads.nf'
 include { CREATE_CONFIG_FILE } from './modules/create_config_file.nf'
 
 
-// check pacbio reads are all the same file type
-def pacbio_reads = file(params.pacbio_reads)
-def input_pacbio = pacbio_reads.listFiles().findAll { it.name.endsWith('.bam') || it.name.endsWith('.fastq.gz') }
+// // check pacbio reads are all the same file type
+// def pacbio_reads = file(params.pacbio_reads)
+// def input_pacbio = pacbio_reads.listFiles().findAll { it.name.endsWith('.bam') || it.name.endsWith('.fastq.gz') }
 
-if (!input_pacbio) {
-    throw new IllegalArgumentException("❌ No pacbio input files found!")
-}
+// if (!input_pacbio) {
+//     throw new IllegalArgumentException("❌ No pacbio input files found!")
+// }
 
-// --- get extensions ---
-def unique_exts = input_pacbio.collect { f ->
-    f.name.endsWith('.fastq.gz') ? 'fastq.gz' :
-    f.name.endsWith('.bam')      ? 'bam' :
-    f.extension
-}.unique()
+// // --- get extensions ---
+// def unique_exts = input_pacbio.collect { f ->
+//     f.name.endsWith('.fastq.gz') ? 'fastq.gz' :
+//     f.name.endsWith('.bam')      ? 'bam' :
+//     f.extension
+// }.unique()
 
-if (unique_exts.size() > 1) {
-    throw new IllegalArgumentException("❌ Multiple file types detected in pacbio inputs: ${unique_exts.join(', ')}")
-}
+// if (unique_exts.size() > 1) {
+//     throw new IllegalArgumentException("❌ Multiple file types detected in pacbio inputs: ${unique_exts.join(', ')}")
+// }
 
-println "✅ Detected file type: ${unique_exts[0]}"
+// println "✅ Detected file type: ${unique_exts[0]}"
 
 
-// see whether hi-c reads exist
-def hic_reads = file(params.hic_reads)
+// // see whether hi-c reads exist
+// def hic_reads = file(params.hic_reads)
 
-def input_hic = (hic_reads.exists() && hic_reads.isDirectory()) ?
-                 hic_reads.listFiles()?.findAll { it.isFile() } :
-                 []
+// def input_hic = (hic_reads.exists() && hic_reads.isDirectory()) ?
+//                  hic_reads.listFiles()?.findAll { it.isFile() } :
+//                  []
 
-if (!input_hic) {
-    log.warn "hic reads directory does not exist or is empty - are you running an assembly without scaffolding?"
-} else {
-    log.info "✅ Found ${input_hic.size()} hic files in '${hic_reads}'"
-}
+// if (!input_hic) {
+//     log.warn "hic reads directory does not exist or is empty - are you running an assembly without scaffolding?"
+// } else {
+//     log.info "✅ Found ${input_hic.size()} hic files in '${hic_reads}'"
+// }
 
 
 workflow {
 
     // input channels
-    hic_reads_ch = input_hic ? Channel.fromPath(input_hic) : Channel.empty()
+ //   hic_reads_ch = input_hic ? Channel.fromPath(input_hic) : Channel.empty()
 
-    pacbio_reads_ch = Channel.fromPath(input_pacbio)
+ //   pacbio_reads_ch = Channel.fromPath(input_pacbio)
 
 
-    // process pacbio reads
-    concat_pacbio_reads_ch = pacbio_reads_ch.collect()
+    // // process pacbio reads
+    // concat_pacbio_reads_ch = pacbio_reads_ch.collect()
 
-    if (unique_exts[0] == 'bam') {
-        CONCAT_PACBIO_BAM(concat_pacbio_reads_ch)
-        pacbio_config_ch = CONCAT_PACBIO_BAM.out.processed_pacbio
-    } else if (unique_exts[0] == 'fastq.gz') {
-        CONCAT_PACBIO_FASTQ(concat_pacbio_reads_ch)
-        pacbio_config_ch = CONCAT_PACBIO_FASTQ.out.processed_pacbio
-    } else {
-        error("unrecognised file type: ${unique_exts[0]}. How did you even get here?")
-    }
+    // if (unique_exts[0] == 'bam') {
+    //     CONCAT_PACBIO_BAM(concat_pacbio_reads_ch)
+    //     pacbio_config_ch = CONCAT_PACBIO_BAM.out.processed_pacbio
+    // } else if (unique_exts[0] == 'fastq.gz') {
+    //     CONCAT_PACBIO_FASTQ(concat_pacbio_reads_ch)
+    //     pacbio_config_ch = CONCAT_PACBIO_FASTQ.out.processed_pacbio
+    // } else {
+    //     error("unrecognised file type: ${unique_exts[0]}. How did you even get here?")
+    // }
 
-    //process any hic reads
-    if (input_hic) {
-        concat_hic_reads_ch = hic_reads_ch.collect()
-        CONCAT_HIC_READS(concat_hic_reads_ch)    
-        hic_config_ch = CONCAT_HIC_READS.out.cram
-    } else {
-        hic_config_ch = file("${projectDir}/assets/dummy_hic")
-    }
+    // //process any hic reads
+    // if (input_hic) {
+    //     concat_hic_reads_ch = hic_reads_ch.collect()
+    //     CONCAT_HIC_READS(concat_hic_reads_ch)    
+    //     hic_config_ch = CONCAT_HIC_READS.out.cram
+    // } else {
+    //     hic_config_ch = file("${projectDir}/assets/dummy_hic")
+    // }
 
     // create config file
-    CREATE_CONFIG_FILE(pacbio_config_ch, hic_config_ch)
+    CREATE_CONFIG_FILE(params.yaml)
     
 }
