@@ -7,14 +7,14 @@ process CREATE_CONFIG_FILE {
     publishDir "config", mode: 'copy'
 
     input:
-    path yaml
+    val(yaml)
     path pacbio_reads
     path hic_reads
     
     output:
     path "sanger_tol_config.yaml"
 
-
+    exec:
     def yaml_data = readYAML(yaml)
 
     def id = yaml_data.dataset_id

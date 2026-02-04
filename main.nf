@@ -108,7 +108,7 @@ def readYAML(yamlfile) {
 
 workflow {
 
-    input channels
+   // input channels
    hic_reads_ch = input_hic ? Channel.fromPath(input_hic) : Channel.empty()
 
    pacbio_reads_ch = Channel.fromPath(input_pacbio)
@@ -136,9 +136,7 @@ workflow {
         hic_config_ch = file("${projectDir}/assets/dummy_hic")
     }
 
-    def yaml_data = readYAML(file(params.yaml))
-
-
+    def yaml_data = file(params.yaml)
 
     // create config file
     CREATE_CONFIG_FILE(yaml_data, pacbio_config_ch, hic_config_ch)
