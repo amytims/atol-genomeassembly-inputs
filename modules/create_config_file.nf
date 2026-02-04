@@ -8,8 +8,8 @@ process CREATE_CONFIG_FILE {
 
     input:
     path yaml
-    //path pacbio_reads
-    //path hic_reads
+    path pacbio_reads
+    path hic_reads
     
     output:
     path "sanger_tol_config.yaml"
@@ -43,12 +43,12 @@ process CREATE_CONFIG_FILE {
     mitochondrial_code: ${mito_code}
     sequencing_data:
     long_reads:
-        platform: "${long_reads}"
-        reads:
-        - /scratch/pawsey1132/atims/new_pipeline_version/results/reads/hifi/PorochilusObbesi2850005_ccs_reads.fasta.gz
+      platform: "${long_reads}"
+      reads:
+        - ${pacbio_reads}
     hic:
-        reads:
-        - /scratch/pawsey1132/atims/new_pipeline_version/results/reads/hic/PorochilusObbesi2850005.cram
+      reads:
+        - ${hic_reads}
     EOF
 
     if [ -n "${motifs_yaml}" ]; then
