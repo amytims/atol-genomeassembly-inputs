@@ -108,7 +108,6 @@ def readYAML(yamlfile) {
 }
 
 workflow {
-
     // read in the yaml file
     def yaml_data = readYAML(file(params.yaml))
 
@@ -123,9 +122,6 @@ workflow {
         pacbio_samples_reformatted = pacbio_samples
             .collectMany { pkg, pkgData ->
                 pkgData.collect { file ->
-
-                    def basename = file.name.getBaseName(1)
-                    def file_path = "${params.longread_indir}"+basename+".trim.fastq.gz"
                     [
                         package: pkg,
                         file_name: file.name,
@@ -133,10 +129,8 @@ workflow {
                         url: file.url,
                         md5sum: file.md5sum,
                         lane: [],
-                        read: [],
-                        file: file_path
+                        read: []
                     ]
-
                 }
             }
 
@@ -145,15 +139,32 @@ workflow {
         pacbio_samples_ch.view()
         
         // check each input file exists; throw error if not
-        pacbio_samples_ch
+        pacbio_filepaths_ch = pacbio_samples_ch
+            .map { file_info ->
+                    def basename = file(file_info.file_name).getBaseName()
+                    [
+                        package: file_info.package,
+                        file_name: file_info.file_name,
+                        format: file_info.format,
+                        url: file_info.url,
+                        md5sum: file_info.md5sum,
+                        lane: [],
+                        read: [],
+			file: "${params.longread_indir}"+basename+".trim.fastq.gz" 
+                    ]
+            }
+
+        pacbio_filepaths_ch
             .map { file_info ->
                     if ( !file(file_info.file).exists() ) { error(
                     """
-                    ERROR: ${file_info.file} does not exist. Check \'--indir\' is correct
-                    """
+                    ERROR: ${file_info.file} does not exist. Check \'--longread_indir\' is correct
+                    """.stripIndent()
                     )
                 } 
             }
+
+        // pacbio_filepaths_ch.view()
     }
 
     /////////////////////////////
