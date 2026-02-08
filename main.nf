@@ -91,7 +91,7 @@ println "✅ Detected long-read file type: ${unique_exts[0]}"
 
 
 // see whether hi-c reads exist
-def hic_reads = file(params.hic_reads)
+def hic_reads = file(params.hic_indir)
 
 def input_hic = (hic_reads.exists() && hic_reads.isDirectory()) ?
                  hic_reads.listFiles()?.findAll { it.isFile() } :
