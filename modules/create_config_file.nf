@@ -21,7 +21,7 @@ process CREATE_CONFIG_FILE {
     def species = yaml_data.scientific_name
     def mito_code = yaml_data.mito_code
     def busco_lineage = yaml_data.busco_lineage
-    def mito_hmm_name = yaml_file.mito_hmm_name
+    def mito_hmm_name = yaml_data.mito_hmm_name
 
     long_reads = yaml_data.reads?.PACBIO_SMRT ? "pacbio" : "ont"
 
@@ -35,21 +35,22 @@ process CREATE_CONFIG_FILE {
         ? "hic_motif:\n" + motifs.collect { "      - ${it}" }.join('\n') + '\n'
         : ""
 
+    script:
     """
     cat <<EOF > sanger_tol_config.yaml
     metadata:
-    id: ${id}
-    species: "${species}"
-    mitochondrial_code: ${mito_code}
+      id: ${id}
+      species: "${species}"
+      mitochondrial_code: ${mito_code}
     sequencing_data:
-    long_reads:
-      platform: "${long_reads}"
-      reads:
-        - ${pacbio_reads}
-    hic:
-      reads:
-        - ${hic_reads}
-    EOF
+      long_reads:
+        platform: "${long_reads}"
+        reads:
+          - ${params.outdir}/reads/hifi/${pacbio_reads}
+      hic:
+        reads:
+          - ${params.outdir}/reads/hic/${hic_reads}
+EOF
 
     if [ -n "${motifs_yaml}" ]; then
     cat <<EOF >> sanger_tol_config.yaml
@@ -59,11 +60,10 @@ process CREATE_CONFIG_FILE {
 
     cat <<EOF >> sanger_tol_config.yaml
     databases:
-    busco:
+      busco:
         lineage: ${busco_lineage}
-    oatk:
+      oatk:
         mito_hmm: https://github.com/c-zhou/OatkDB/raw/main/v20230921/${mito_hmm_name}.fam
     EOF
-
-"""
+""".stripIndent()
 }
