@@ -104,6 +104,8 @@ if (!input_hic) {
 }
 
 def readYAML(yamlfile) {
+    // getting the snakeyamlpackage from org.yaml: https://mvnrepository.com/artifact/org.yaml/snakeyaml
+    // .Yaml.load() will load object the text from yamlfile
     return new org.yaml.snakeyaml.Yaml().load(yamlfile.text)
 }
 
@@ -136,9 +138,9 @@ workflow {
 
         pacbio_samples_ch = Channel.from(pacbio_samples_reformatted)
 
-        pacbio_samples_ch.view()
+        //pacbio_samples_ch.view()
         
-        // check each input file exists; throw error if not
+        // map the files to their current filepaths and file extensions
         pacbio_filepaths_ch = pacbio_samples_ch
             .map { file_info ->
                     def basename = file(file_info.file_name).getBaseName()
@@ -150,10 +152,11 @@ workflow {
                         md5sum: file_info.md5sum,
                         lane: [],
                         read: [],
-			file: "${params.longread_indir}"+basename+".trim.fastq.gz" 
+                        file: "${params.longread_indir}"+basename+".trim.fastq.gz" 
                     ]
             }
 
+        // check the files exist where they're supposed to
         pacbio_filepaths_ch
             .map { file_info ->
                     if ( !file(file_info.file).exists() ) { error(
@@ -165,6 +168,10 @@ workflow {
             }
 
         // pacbio_filepaths_ch.view()
+
+        // group the files by package
+        pacbio_grouped_ch = pacbio_filepaths_ch.groupTuple()
+        pacbio_grouped_ch.view()
     }
 
     /////////////////////////////
