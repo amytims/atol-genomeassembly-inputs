@@ -8,8 +8,8 @@ process CREATE_CONFIG_FILE {
 
     input:
     val(yaml)
-    path pacbio_reads
-    path hic_reads
+    path longread_files
+    path hic_files
     
     output:
     path "sanger_tol_config.yaml"
@@ -36,6 +36,35 @@ process CREATE_CONFIG_FILE {
         : ""
 
     script:
+    def metadata = [
+      metadata: [
+        id: ${id},
+        species: "${species}",
+        mitochondrial_code: ${mito_code}
+      ]
+    ]
+
+    def sequencing_data = yaml_data.reads?.'Hi-C' ? [
+      sequencing_data: [
+        long_reads: [
+          platform: "${long_reads}",
+          reads: [##list of reads ${params.outdir}/reads/hifi/${longread_files}]
+        ], 
+        hic: [
+          reads: [##list of hic_reads, - ${params.outdir}/reads/hic/${hic_reads}] 
+        ]
+      ]
+    ] : [
+      sequencing_data: [
+        long_reads: [
+          platform: "${long_reads}",
+          reads: [##list of reads ${params.outdir}/reads/hifi/${longread_files}]
+        ]
+      ]
+    ]
+
+    new File(test_config.yaml).write(YamlOutput.dump(metadata))
+
     """
     cat <<EOF > sanger_tol_config.yaml
     metadata:
