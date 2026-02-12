@@ -50,50 +50,48 @@ params.each { entry ->
     }
 }
 
-// if ( !params.sample_id ) {
-//     throw new IllegalArgumentException("no --sample_id specified")
+include { CONVERT_PACBIO } from './modules/convert_pacbio.nf'
+include { FORMAT_CONFIG_FILE } from './modules/format_config_file.nf'
+
+// include { CONCAT_PACBIO_FASTQ } from './modules/concat_pacbio_fastq.nf'
+// include { CONCAT_PACBIO_BAM } from './modules/concat_pacbio_bam.nf'
+// include { CONCAT_HIC_READS } from './modules/concat_hic_reads.nf'
+// include { CREATE_CONFIG_FILE } from './modules/create_config_file.nf'
+
+// // check longread files are all the same file type
+// def longread_files = file(params.longread_indir)
+// def input_longreads = longread_files.listFiles().findAll { it.name.endsWith('.bam') || it.name.endsWith('.fastq.gz') }
+
+// if (!input_longreads) {
+//     throw new IllegalArgumentException("❌ No input long-read files found!")
 // }
 
-include { CONCAT_PACBIO_FASTQ } from './modules/concat_pacbio_fastq.nf'
-include { CONCAT_PACBIO_BAM } from './modules/concat_pacbio_bam.nf'
-include { CONCAT_HIC_READS } from './modules/concat_hic_reads.nf'
-include { CREATE_CONFIG_FILE } from './modules/create_config_file.nf'
+// // --- get extensions ---
+// def unique_exts = input_longreads.collect { f ->
+//     f.name.endsWith('.fastq.gz') ? 'fastq.gz' :
+//     f.name.endsWith('.bam')      ? 'bam' :
+//     f.extension
+// }.unique()
+
+// if (unique_exts.size() > 1) {
+//     throw new IllegalArgumentException("❌ Multiple file types detected in long-read inputs: ${unique_exts.join(', ')}")
+// }
+
+// println "✅ Detected long-read file type: ${unique_exts[0]}"
 
 
-// check longread files are all the same file type
-def longread_files = file(params.longread_indir)
-def input_longreads = longread_files.listFiles().findAll { it.name.endsWith('.bam') || it.name.endsWith('.fastq.gz') }
+// // see whether hi-c reads exist
+// def hic_reads = file(params.hic_indir)
 
-if (!input_longreads) {
-    throw new IllegalArgumentException("❌ No input long-read files found!")
-}
+// def input_hic = (hic_reads.exists() && hic_reads.isDirectory()) ?
+//                  hic_reads.listFiles()?.findAll { it.isFile() } :
+//                  []
 
-// --- get extensions ---
-def unique_exts = input_longreads.collect { f ->
-    f.name.endsWith('.fastq.gz') ? 'fastq.gz' :
-    f.name.endsWith('.bam')      ? 'bam' :
-    f.extension
-}.unique()
-
-if (unique_exts.size() > 1) {
-    throw new IllegalArgumentException("❌ Multiple file types detected in long-read inputs: ${unique_exts.join(', ')}")
-}
-
-println "✅ Detected long-read file type: ${unique_exts[0]}"
-
-
-// see whether hi-c reads exist
-def hic_reads = file(params.hic_indir)
-
-def input_hic = (hic_reads.exists() && hic_reads.isDirectory()) ?
-                 hic_reads.listFiles()?.findAll { it.isFile() } :
-                 []
-
-if (!input_hic) {
-    log.warn "hic reads directory does not exist or is empty - are you running an assembly without scaffolding?"
-} else {
-    log.info "✅ Found ${input_hic.size()} hic files in '${hic_reads}'"
-}
+// if (!input_hic) {
+//     log.warn "hic reads directory does not exist or is empty - are you running an assembly without scaffolding?"
+// } else {
+//     log.info "✅ Found ${input_hic.size()} hic files in '${hic_reads}'"
+// }
 
 def readYAML(yamlfile) {
     // getting the snakeyamlpackage from org.yaml: https://mvnrepository.com/artifact/org.yaml/snakeyaml
@@ -117,38 +115,24 @@ workflow {
         pacbio_samples_reformatted = pacbio_samples
             .collectMany { pkg, pkgData ->
                 pkgData.collect { file ->
+                    def file_name = file.url.tokenize('/')[-1].replaceFirst(/\.bam$/, '.trim.fastq.gz')
+                    def file_path = "${params.longread_indir}"+"/"+file_name            
                     [
                         package: pkg,
-                        file_name: file.name,
-                        format: file.format,
+                        file_name: file_name,
                         url: file.url,
                         md5sum: file.md5sum,
                         lane: [],
-                        read: []
+                        read: [],
+                        file: file_path
                     ]
                 }
             }
 
         pacbio_samples_ch = Channel.from(pacbio_samples_reformatted)
 
-        //pacbio_samples_ch.view()
+        pacbio_samples_ch.view()
         
-        // map the files to their current filepaths and file extensions
-        pacbio_filepaths_ch = pacbio_samples_ch
-            .map { file_info ->
-                    def basename = file(file_info.file_name).getBaseName()
-                    [
-                        package: file_info.package,
-                        file_name: file_info.file_name,
-                        format: file_info.format,
-                        url: file_info.url,
-                        md5sum: file_info.md5sum,
-                        lane: [],
-                        read: [],
-                        file: "${params.longread_indir}"+basename+".trim.fastq.gz" 
-                    ]
-            }
-
         // check the files exist where they're supposed to
         pacbio_filepaths_ch
             .map { file_info ->
@@ -162,10 +146,17 @@ workflow {
 
         // pacbio_filepaths_ch.view()
 
-        // group the files by package
-        pacbio_grouped_ch = pacbio_filepaths_ch.groupTuple()
-        pacbio_grouped_ch.view()
+        // reformat data from fastq to fasta
+        //CONVERT_PACBIO(pacbio_filepaths_ch)
+
+        // collect the output reads
+        //longread_files = CONVERT_PACBIO.out.pacbio_fa.collect()
+
+        // convert the read paths to a big string
+        //long_reads_str = longread_files.join(',')
+
     }
+}
 
     /////////////////////////////
 
@@ -191,7 +182,7 @@ workflow {
 
 //     //process any hic reads
 
-//    hic_samples = yaml_data.reads?.'Hi-C'
+    // hic_samples = yaml_data.reads?.'Hi-C'
 
     // if ( !hic_samples ) { 
 
@@ -199,75 +190,47 @@ workflow {
 
     // } else {
 
-            // need to take a look at outputs here to understand correct formatting and mapping
-    //     hic_samples_reformatted = hic_samples
-    //         .collectMany { pkg, pkgData ->
-    //             pkgData.collect { file ->
-    //                 [
-    //                     package: pkg,
-    //                     file_name: file.name,
-    //                     format: file.format,
-    //                     url: file.url,
-    //                     md5sum: file.md5sum,
-    //                     lane: [],
-    //                     read: []
-    //                 ]
-    //             }
-    //         }
+    // hic_filepaths_ch = Channel.from(hic_samples.collect { sample_name, lanes ->
 
-    //     pacbio_samples_ch = Channel.from(pacbio_samples_reformatted)
+    //     // Extract R1 and R2 file lists
+    //     r1_files = lanes.r1.collect {"${params.hic_indir}/${it.name.replaceAll(/\\.fq\\.gz$/, '.trim.fq.gz')}"}
+    //     r2_files = lanes.r2.collect {"${params.hic_indir}/${it.name.replaceAll(/\\.fq\\.gz$/, '.trim.fq.gz')}"}
 
-    //     //pacbio_samples_ch.view()
-        
-    //     // map the files to their current filepaths and file extensions
-    //     pacbio_filepaths_ch = pacbio_samples_ch
-    //         .map { file_info ->
-    //                 def basename = file(file_info.file_name).getBaseName()
-    //                 [
-    //                     package: file_info.package,
-    //                     file_name: file_info.file_name,
-    //                     format: file_info.format,
-    //                     url: file_info.url,
-    //                     md5sum: file_info.md5sum,
-    //                     lane: [],
-    //                     read: [],
-    //                     file: "${params.longread_indir}"+basename+".trim.fastq.gz" 
-    //                 ]
-    //         }
+    //     // Zip R1 and R2 lanes together
+    //     r1_files.zip(r2_files).collect { r1, r2 ->
+    //         tuple(sample_name, r1, r2)
+    //     }
+    // }.flatten())
 
     //     // check the files exist where they're supposed to
-    //     pacbio_filepaths_ch
+    //     hic_filepaths_ch
     //         .map { file_info ->
     //                 if ( !file(file_info.file).exists() ) { error(
     //                 """
-    //                 ERROR: ${file_info.file} does not exist. Check \'--longread_indir\' is correct
+    //                 ERROR: ${file_info.file} does not exist. Check \'--hic_indir\' is correct
     //                 """.stripIndent()
     //                 )
     //             } 
-    //         }
+    //         }    
 
-    //     // pacbio_filepaths_ch.view()
+// steps
+// 1. check pacbio files exist (need longread_indir and yaml file)
+// 2. convert fq.gz files to fa.gz - publish to outdir
+// 3. check hic files exist (need --hic_indir and yaml file)
+// 4. check no unexpected hic files exist
+// 5. convert hic files to .cram - publish to outdir
+// 6. populate config file with file paths and info
 
-    //     // group the files by package
-    //     pacbio_grouped_ch = pacbio_filepaths_ch.groupTuple()
-    //     pacbio_grouped_ch.view()
-    // }        
 
 
-///////////
+        // if(###HIC READS EXIST)
+        // CONVERT_HIC(hic_filepaths_ch)
+        // hic_files = CONVERT_HIC.out.collect()
+        // #####
 
-//     if (input_hic) {
-//         concat_hic_reads_ch = hic_reads_ch.collect()
-//         CONCAT_HIC_READS(concat_hic_reads_ch)    
-//         hic_config_ch = CONCAT_HIC_READS.out.cram
-//     } else {
-//         hic_config_ch = file("${projectDir}/assets/dummy_hic")
-            // can I just go hic_config_ch = []
-//     }
+        // // if hic_reads exists, joing them otherwise leave blank
+        // hic_reads_str = ?hic_files ? hic_files.join(','): ""
 
-//     def yaml_data = file(params.yaml)
+        // // format the config file
+        // FORMAT_CONFIG_FILE(params.yaml, long_reads_str, hic_reads_str)
 
-//     // create config file
-//     CREATE_CONFIG_FILE(yaml_data, pacbio_config_ch, hic_config_ch)
-    
-}
