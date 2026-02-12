@@ -117,7 +117,8 @@ workflow {
                 pkgData.collect { file ->
                     def file_name = file.url.tokenize('/')[-1].replaceFirst(/\.bam$/, '.trim.fastq.gz')
                     def input_file_path = "${params.longread_indir}"+"/"+file_name 
-                    def publish_path = "{params.outdir}"+"/reads/hifi/"+file_name.replaceFirst(/\.fastq.gz$/, '.fasta.gz')
+                    def outfile_name = file_name.replaceFirst(/\.fastq.gz$/, '.fasta.gz')
+                    def publish_path = "${params.outdir}"+"/reads/hifi/"+outfile_name
                     [
                         package: pkg,
                         file_name: file_name,
@@ -125,7 +126,7 @@ workflow {
                         md5sum: file.md5sum,
                         lane: [],
                         read: [],
-                        file: input_file_path
+                        file: input_file_path,
                         publish_path: publish_path
                     ]
                 }
@@ -146,14 +147,12 @@ workflow {
                 } 
             }
 
-        // pacbio_filepaths_ch.view()
-
         // reformat data from fastq to fasta
-        //CONVERT_PACBIO(pacbio_samples_ch)
+        CONVERT_PACBIO(pacbio_samples_ch)
 
         // collect the output reads
-        //longread_files = CONVERT_PACBIO.out.pacbio_fa.collect()
-        //longread_files.view()
+        longread_files = CONVERT_PACBIO.out.pacbio_fa.collect()
+        longread_files.view()
 
         //longread_files_ch = Channel.from(longread_files).join(',')
         //longread_files_ch.view()
