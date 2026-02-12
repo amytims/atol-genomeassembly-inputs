@@ -147,14 +147,16 @@ workflow {
         // pacbio_filepaths_ch.view()
 
         // reformat data from fastq to fasta
-        //CONVERT_PACBIO(pacbio_filepaths_ch)
+        CONVERT_PACBIO(pacbio_filepaths_ch)
 
         // collect the output reads
-        //longread_files = CONVERT_PACBIO.out.pacbio_fa.collect()
+        longread_files = CONVERT_PACBIO.out.pacbio_fa.collect()
+        longread_files.view()
+
 
         // convert the read paths to a big string
-        //long_reads_str = longread_files.join(',')
-
+        long_reads_str = longread_files.join(',')
+        long_reads_str.view()
     }
 }
 
