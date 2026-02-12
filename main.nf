@@ -147,7 +147,7 @@ workflow {
         // pacbio_filepaths_ch.view()
 
         // reformat data from fastq to fasta
-        CONVERT_PACBIO(pacbio_filepaths_ch)
+        CONVERT_PACBIO(pacbio_samples_ch)
 
         // collect the output reads
         longread_files = CONVERT_PACBIO.out.pacbio_fa.collect()
