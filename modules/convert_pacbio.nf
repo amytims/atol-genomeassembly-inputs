@@ -6,7 +6,7 @@ process CONVERT_PACBIO {
 
     output:
     path publish_dir, emit: pacbio_fa
-    val(publish_dir); emit: publish_path
+    val(publish_dir), emit: publish_path
 
     script:
     basename=input_file.getBaseName(input_file.name.endsWith('.gz')? 2: 1)
