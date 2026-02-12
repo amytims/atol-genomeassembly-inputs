@@ -153,10 +153,11 @@ workflow {
         longread_files = CONVERT_PACBIO.out.pacbio_fa.collect()
         longread_files.view()
 
-
+        longread_files_ch = Channel.from(longread_files).join(',')
+        longread_files_ch.view()
         // convert the read paths to a big string
-        long_reads_str = longread_files.join(',')
-        long_reads_str.view()
+        //long_reads_str = longread_files.join(',')
+        //long_reads_str.view()
     }
 }
 
