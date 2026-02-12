@@ -151,7 +151,7 @@ workflow {
         CONVERT_PACBIO(pacbio_samples_ch)
 
         // collect the output reads
-        longread_files = CONVERT_PACBIO.out.pacbio_fa.collect()
+        longread_files = CONVERT_PACBIO.out.publish_path.collect()
         longread_files.view()
 
         //longread_files_ch = Channel.from(longread_files).join(',')

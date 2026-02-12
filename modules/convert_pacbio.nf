@@ -5,7 +5,8 @@ process CONVERT_PACBIO {
     tuple val(pkg), val(file_name), val(url), val(md5sum), val(lane), val(read), path(input_file), val(publish_dir)
 
     output:
-    val(publish_dir), emit: pacbio_fa
+    path publish_dir, emit: pacbio_fa
+    val(publish_dir); emit: publish_path
 
     script:
     basename=input_file.getBaseName(input_file.name.endsWith('.gz')? 2: 1)
