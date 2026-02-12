@@ -10,6 +10,6 @@ process CONVERT_PACBIO {
     script:
     basename=input_file.getBaseName(input_file.name.endsWith('.gz')? 2: 1)
     """
-    seqkit fq2fa $file -j ${task.cpus} -o "${basename}.fasta.gz"
+    seqkit fq2fa $input_file -j ${task.cpus} -o "${basename}.fasta.gz"
     """
 }
