@@ -134,7 +134,7 @@ workflow {
         pacbio_samples_ch.view()
         
         // check the files exist where they're supposed to
-        pacbio_filepaths_ch
+        pacbio_samples_ch
             .map { file_info ->
                     if ( !file(file_info.file).exists() ) { error(
                     """
